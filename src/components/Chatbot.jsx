@@ -101,7 +101,7 @@ const Chatbot = () => {
   };
 
   return (
-    <div className="flex flex-row min-h-screen">
+    <div className="flex flex-row min-h-screen ">
       {/* Chat History Sidebar */}
       <ChatHistory
         chats={chats}

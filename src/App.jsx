@@ -8,13 +8,14 @@ import NewHome from './components/NewHome';
 import Chatbot from './components/Chatbot';
 import QuizComponent from './components/Quiz';
 import ResultPage from './components/Result';
+import Footer from './components/Footer';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path='/home' element={<NewHome />} />
+        <Route path="/" element={<NewHome />} />
+        {/* <Route path='/home' element={<NewHome />} /> */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path='/chatbot' element={<Chatbot />} />
@@ -22,6 +23,7 @@ function App() {
         <Route path="/result" element={<ResultPage />} />
         
       </Routes>
+      {/* <Footer /> */}
     </Router>
   );
 }

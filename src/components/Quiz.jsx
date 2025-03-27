@@ -42,17 +42,33 @@ const QuizComponent = () => {
 
       const rawQuiz = response.choices[0]?.message?.content;
 
+      if (!rawQuiz) {
+        throw new Error("Quiz content is empty or invalid.");
+      }
+
+      console.log("Raw Quiz Response:", rawQuiz); // Debugging: Log the raw quiz response
+
       const formattedQuiz = rawQuiz
         .split("\n")
         .filter((line) => line.trim() !== "" && !line.toLowerCase().startsWith("answer:"))
         .reduce((acc, line) => {
           if (/^\d+\./.test(line)) {
-            acc.push({ question: line, options: [] });
+            // Match lines starting with a number followed by a period (e.g., "1. Question")
+            acc.push({ question: line.replace(/^\d+\.\s*/, ""), options: [] });
           } else if (/^[A-D]\)/.test(line)) {
-            acc[acc.length - 1].options.push(line.trim());
+            // Match lines starting with A), B), C), or D) (e.g., "A) Option")
+            if (acc.length > 0) {
+              acc[acc.length - 1].options.push(line.trim());
+            }
           }
           return acc;
         }, []);
+
+      console.log("Formatted Quiz:", formattedQuiz); // Debugging: Log the formatted quiz
+
+      if (formattedQuiz.length === 0 || formattedQuiz.some((q) => q.options.length < 4)) {
+        throw new Error("Failed to parse quiz questions. Please try again.");
+      }
 
       setQuiz(formattedQuiz.slice(0, 15)); // Ensure only 15 questions
     } catch (error) {
@@ -110,7 +126,7 @@ const QuizComponent = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 via-purple-200 to-pink-200 text-black px-4 sm:px-8">
       <h1 className="text-3xl sm:text-4xl font-bold mb-6 text-center">Custom Quiz Generator</h1>
 
       {!loading && quiz.length === 0 && !quizSubmitted && (
