@@ -15,69 +15,82 @@ const QuizComponent = () => {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [score, setScore] = useState(null);
 
-  const generateQuiz = async () => {
-    if (!profession) {
-      alert("Please enter a profession or degree.");
-      return;
+const generateQuiz = async () => {
+  if (!profession) {
+    alert("Please enter a profession or degree.");
+    return;
+  }
+
+  setLoading(true);
+  setQuiz([]);
+  setUserAnswers({});
+  setQuizSubmitted(false);
+  setScore(null);
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: "llama-3.2-90b-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: `Create a quiz with 15 multiple-choice questions for students subject ${profession}. Each question should have 4 options.`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    const rawQuiz = response.choices[0]?.message?.content;
+
+    if (!rawQuiz) {
+      throw new Error("Quiz content is empty or invalid.");
     }
 
-    setLoading(true);
-    setQuiz([]);
-    setUserAnswers({});
-    setQuizSubmitted(false);
-    setScore(null);
+    console.log("Raw Quiz Response:", rawQuiz); // Debugging: Log the raw quiz response
 
-    try {
-      const response = await groq.chat.completions.create({
-        model: "llama-3.2-90b-vision-preview",
-        messages: [
-          {
-            role: "user",
-            content: `Create a quiz with 15 multiple-choice questions for students interested in pursuing a career in ${profession}. Each question should have 4 options.`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
+    // Parse the raw quiz response
+    const formattedQuiz = [];
+    const lines = rawQuiz.split("\n");
+    let currentQuestion = null;
 
-      const rawQuiz = response.choices[0]?.message?.content;
-
-      if (!rawQuiz) {
-        throw new Error("Quiz content is empty or invalid.");
+    for (const line of lines) {
+      if (/^\d+\./.test(line)) {
+        // Match lines starting with a number followed by a period (e.g., "1. Question")
+        if (currentQuestion) {
+          formattedQuiz.push(currentQuestion);
+        }
+        currentQuestion = {
+          question: line.replace(/^\d+\.\s*/, "").trim(),
+          options: [],
+        };
+      } else if (/^[A-D]\)/.test(line)) {
+        // Match lines starting with A), B), C), or D) (e.g., "A) Option")
+        if (currentQuestion) {
+          currentQuestion.options.push(line.trim());
+        }
       }
-
-      console.log("Raw Quiz Response:", rawQuiz); // Debugging: Log the raw quiz response
-
-      const formattedQuiz = rawQuiz
-        .split("\n")
-        .filter((line) => line.trim() !== "" && !line.toLowerCase().startsWith("answer:"))
-        .reduce((acc, line) => {
-          if (/^\d+\./.test(line)) {
-            // Match lines starting with a number followed by a period (e.g., "1. Question")
-            acc.push({ question: line.replace(/^\d+\.\s*/, ""), options: [] });
-          } else if (/^[A-D]\)/.test(line)) {
-            // Match lines starting with A), B), C), or D) (e.g., "A) Option")
-            if (acc.length > 0) {
-              acc[acc.length - 1].options.push(line.trim());
-            }
-          }
-          return acc;
-        }, []);
-
-      console.log("Formatted Quiz:", formattedQuiz); // Debugging: Log the formatted quiz
-
-      if (formattedQuiz.length === 0 || formattedQuiz.some((q) => q.options.length < 4)) {
-        throw new Error("Failed to parse quiz questions. Please try again.");
-      }
-
-      setQuiz(formattedQuiz.slice(0, 15)); // Ensure only 15 questions
-    } catch (error) {
-      console.error("Error generating quiz:", error);
-      alert("Failed to generate quiz. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // Push the last question if it exists
+    if (currentQuestion) {
+      formattedQuiz.push(currentQuestion);
+    }
+
+    console.log("Formatted Quiz:", formattedQuiz); // Debugging: Log the formatted quiz
+
+    // Validate the parsed quiz
+    if (formattedQuiz.length === 0 || formattedQuiz.some((q) => q.options.length < 4)) {
+      throw new Error("Failed to parse quiz questions. Please try again.");
+    }
+
+    setQuiz(formattedQuiz.slice(0, 15)); // Ensure only 15 questions
+  } catch (error) {
+    console.error("Error generating quiz:", error);
+    alert("Failed to generate quiz. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAnswerChange = (questionIndex, selectedOption) => {
     setUserAnswers((prev) => ({
